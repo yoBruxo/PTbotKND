@@ -87,9 +87,9 @@ async def delete_command_message(ctx, delay=3):
         await asyncio.sleep(delay)
         await ctx.message.delete()
     except discord.NotFound:
-        pass  # Mensagem já foi deletada
+        pass  
     except discord.Forbidden:
-        pass  # Bot não tem permissão para deletar mensagens
+        pass  
 
 async def delete_message_after_delay(message, delay):
     """Deleta uma mensagem após um delay"""
@@ -122,7 +122,7 @@ def keep_alive():
             self.wfile.write(json.dumps(status, indent=2).encode())
         
         def log_message(self, format, *args):
-            # Silencia logs do servidor HTTP para não poluir console
+            
             pass
     
     server = HTTPServer(('0.0.0.0', 8000), Handler)
@@ -136,7 +136,6 @@ async def self_ping():
         print("⚠️ aiohttp não instalado - self-ping desabilitado")
         return
     
-    # Só ativa o self-ping se estiver no Render
     if not os.getenv('RENDER'):
         print("ℹ️ Self-ping desabilitado (não está no Render)")
         return
@@ -150,8 +149,8 @@ async def self_ping():
     
     while True:
         try:
-            # Aguarda 14 minutos (antes dos 15 min de timeout do Render)
-            await asyncio.sleep(14 * 60)  # 14 minutos
+            
+            await asyncio.sleep(14 * 60)  
             
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
                 async with session.get(render_url) as response:
@@ -162,17 +161,17 @@ async def self_ping():
                         
         except Exception as e:
             print(f"❌ Erro no self-ping: {e}")
-            # Continua tentando mesmo com erro
-            await asyncio.sleep(60)  # Aguarda 1 minuto antes de tentar novamente
+            
+            await asyncio.sleep(60)  
 
 def is_pt_message(message_id):
     """Verifica se uma mensagem é de uma PT (original ou de listagem)"""
     for pt_id, pt_data in parties.items():
-        # Verifica se é a mensagem original da PT
+        
         if pt_data["msg"] and message_id == pt_data["msg"].id:
             return pt_id, pt_data, "original"
         
-        # Verifica se é uma mensagem de listagem
+        
         for lista_msg in pt_data["lista_msgs"]:
             if message_id == lista_msg.id:
                 return pt_id, pt_data, "lista"
@@ -184,8 +183,7 @@ async def on_ready():
     print(f'✅ Bot conectado como {bot.user}')
     print(f'Bot está em {len(bot.guilds)} servidor(es)')
     
-    # Inicia o self-ping após bot estar pronto
-    await asyncio.sleep(30)  # Aguarda 30 segundos para estabilizar
+    await asyncio.sleep(30)  
     asyncio.create_task(self_ping())
 
 @bot.command()
@@ -198,7 +196,7 @@ async def criar_pt(ctx):
         "msg": None, 
         "fechada": False,
         "criador_id": ctx.author.id,
-        "lista_msgs": []  # Para armazenar mensagens do !listar_pts
+        "lista_msgs": []  
     }
 
     embed = gerar_embed(pt_id, ctx.guild)
@@ -211,7 +209,6 @@ async def criar_pt(ctx):
     parties[pt_id]["msg"] = msg
     confirmation_msg = await ctx.send(f"✅ PT {pt_id} criada por {ctx.author.mention}! Reaja para entrar.")
     
-    # Deleta o comando e a mensagem de confirmação após alguns segundos
     asyncio.create_task(delete_command_message(ctx))
     asyncio.create_task(delete_message_after_delay(confirmation_msg, 10))
     
@@ -225,7 +222,6 @@ async def listar_pts(ctx):
         asyncio.create_task(delete_message_after_delay(error_msg, 10))
         return
 
-    # Remove mensagens anteriores de listagem desta PT
     for pt_id in parties:
         pt = parties[pt_id]
         for old_msg in pt["lista_msgs"]:
@@ -239,16 +235,15 @@ async def listar_pts(ctx):
         embed = gerar_embed(pt_id, ctx.guild)
         msg = await ctx.send(embed=embed)
         
-        # Adiciona reações apenas se a PT não estiver encerrada
         if not parties[pt_id]["fechada"]:
             for emoji in valid_emojis:
                 await msg.add_reaction(emoji)
             await msg.add_reaction(close_emoji)
         
-        # Armazena a mensagem para poder deletá-la depois
+
         parties[pt_id]["lista_msgs"].append(msg)
     
-    # Deleta o comando
+
     asyncio.create_task(delete_command_message(ctx))
 
 @bot.command()
@@ -271,7 +266,6 @@ async def remover_jogador(ctx, pt_id: int, membro: discord.Member):
     embed = gerar_embed(pt_id, ctx.guild)
     await pt["msg"].edit(embed=embed)
     
-    # Atualiza também as mensagens de listagem
     for lista_msg in pt["lista_msgs"]:
         try:
             await lista_msg.edit(embed=embed)
@@ -322,10 +316,8 @@ async def on_reaction_add(reaction, user):
             pt_data["fechada"] = True
             embed = gerar_embed(pt_id, reaction.message.guild)
             
-            # Atualiza a mensagem original
             await pt_data["msg"].edit(embed=embed)
             
-            # Atualiza todas as mensagens de listagem e remove reações
             for lista_msg in pt_data["lista_msgs"]:
                 try:
                     await lista_msg.edit(embed=embed)
@@ -393,7 +385,6 @@ async def on_reaction_add(reaction, user):
 
     pt_data[nova_funcao].append(user.id)
 
-    # Remove reações de outras funções apenas na mensagem atual
     try:
         for emoji in valid_emojis:
             if emoji != reaction.emoji:
@@ -411,10 +402,8 @@ async def on_reaction_add(reaction, user):
 
     new_embed = gerar_embed(pt_id, reaction.message.guild)
     
-    # Atualiza a mensagem original
     await pt_data["msg"].edit(embed=new_embed)
     
-    # Atualiza todas as mensagens de listagem
     for lista_msg in pt_data["lista_msgs"]:
         try:
             await lista_msg.edit(embed=new_embed)
@@ -447,17 +436,14 @@ async def on_reaction_remove(reaction, user):
 
         new_embed = gerar_embed(pt_id, reaction.message.guild)
         
-        # Atualiza a mensagem original
         await pt_data["msg"].edit(embed=new_embed)
         
-        # Atualiza todas as mensagens de listagem
         for lista_msg in pt_data["lista_msgs"]:
             try:
                 await lista_msg.edit(embed=new_embed)
             except (discord.NotFound, discord.Forbidden):
                 pass
 
-# Inicia servidor HTTP em thread separada
 Thread(target=keep_alive, daemon=True).start()
 
 bot.run(os.getenv('DISCORD_TOKEN'))
